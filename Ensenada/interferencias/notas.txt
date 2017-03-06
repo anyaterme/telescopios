@@ -1,0 +1,6 @@
+Diametro pequeño (2s) = 4cm
+r = radio de curvatura = 1/c
+z= (c*s**2) / (1+(1-(k+1)*c**2*s**2)**(0.5))
+k = 0 (por ser esfera)
+c=1/r
+z=3

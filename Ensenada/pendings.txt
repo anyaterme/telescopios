@@ -1,0 +1,1 @@
+Checar adaptardor puerto paralelo para el beagle
