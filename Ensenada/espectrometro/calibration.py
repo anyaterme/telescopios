@@ -1,11 +1,11 @@
 #!python
-#Author: Daniel Jacobo Diaz Gonzalez
-#Description
 import pyfits
 import matplotlib.pyplot as plt
 import numpy as np
 import astropy.units as u
 import glob
+import math
+import re
 from astropy.modeling import models, fitting
 
 mask = np.zeros((2048,2048))
@@ -20,8 +20,10 @@ mask[146,80] = 1
 mask[053,88] = 1
 
 class ApogeeFile:
-	def __init__(self, filename, profile, fwhm, fwhm_line, profile_gauss, fwhm_gauss, fwhm_gauss_line, error=0.01, show='n'):
+	def __init__(self, filename, medium_wavelength, profile, fwhm, fwhm_line, medium_wl_gauss, profile_gauss, fwhm_gauss, fwhm_gauss_line, error=0.01):
 		self.filename = filename
+		self.medium_wl = medium_wavelength
+		self.medium_wl_gauss = medium_wl_gauss
 		self.profile = profile
 		self.fwhm = fwhm
 		self.fwhm_line = fwhm_line
@@ -29,9 +31,6 @@ class ApogeeFile:
 		self.fwhm_gauss = fwhm_gauss
 		self.fwhm_gauss_line = fwhm_gauss_line
 		self.error = error
-		self.show = False
-		if (show == "y"):
-			self.show = True
 	
 
 
@@ -47,25 +46,19 @@ def get_FWHM(data, delta_px, to_unit):
 	pos_extremum = data.argmax()  
 	nearest_above = (np.abs(data[pos_extremum:-1] - HM)).argmin() + pos_extremum
 	nearest_below = (np.abs(data[0:pos_extremum] - HM)).argmin()
-
 	FWHM = nearest_above - nearest_below
 	FWHM_units = (FWHM*delta_px).to(to_unit)
-	return (FWHM_units, data[nearest_above])
+	return (FWHM_units, data[nearest_above], nearest_above - FWHM * 0.5)
 
-listDirs = ["./", "./fits/"]
-totalfiles = []
-for mydir in listDirs:
-	files = glob.glob("%s*.fits" % mydir)
-	files=sorted(files)
-	totalfiles += files
+files = glob.glob("./*.fits")
 i = 0
 for filename in files:
 	i+=1
 	print "[%2d] %s" % (i, filename)
 
 files_selected = raw_input("\nPlease, select files (index separated by colon, ex: 1,4,5): ")
-
 files_index = files_selected.split(',')
+initial_wavelength= raw_input("\nPlease, introduce the initial wavelength (AA): ")
 result = []
 for index in files_index:
 	try:
@@ -87,8 +80,6 @@ for index in files_index:
 		if (min(perfil) < 0.):
 			perfil += abs(min(perfil))
 
-		#perfil = (perfil * 1.) / max(perfil)
-
 		FWHM_perfil = np.zeros(len(perfil))
 
 		limit = 0.5
@@ -105,7 +96,7 @@ for index in files_index:
 				pass
 		low_values = perfil < max(perfil) * error
 		perfil[low_values] = np.median(perfil[low_values])
-		FWHM, value = get_FWHM(perfil, 0.87*u.AA, u.nm)
+		FWHM, value, medium_value = get_FWHM(perfil, 0.87*u.AA, u.nm)
 
 		perfil_gauss = None
 		try:
@@ -113,15 +104,17 @@ for index in files_index:
 			fit_g = fitting.LevMarLSQFitter()
 			g = fit_g(g_init, x, perfil)
 			perfil_gauss = g(x)
-			FWHM_gauss, value_gauss = get_FWHM(perfil_gauss, 0.87*u.AA, u.nm)
 
-		except:
-			FWHM_gauss, value_gauss = 0,0
+			FWHM_gauss, value_gauss, medium_value_gauss = get_FWHM(perfil_gauss, 0.87*u.AA, u.nm)
+		except Exception as e:
+			FWHM_gauss, value_gauss, medium_value_gauss = 0,0,0
 			perfil_gauss = None
-			print "\tNo es posible ajustar"
+			print "\tNo es posible ajustar (%s)" % str(e)
 
 		print "\tDimension: (%d,%d)" % (len(hdulist[0].data[0]), len (hdulist[0].data))
+		print "\tMedium Value : %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value) * 0.87 * u.AA)
 		print "\tFWHM: %s" % FWHM
+		print "\tMedium Value (gaussian(: %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value_gauss) * 0.87 * u.AA)
 		print "\tFWHM (gaussian): %s" % FWHM_gauss
 		print "\tExposure time: %s" % hdulist[0].header["EXPTIME"]
 
@@ -129,33 +122,33 @@ for index in files_index:
 		answer = "__"
 		while answer not in valid_answers:
 			answer = raw_input("Do you want show graphic? y/N: ") 
-		FWHM_perfil = np.zeros(len(perfil))
-		FWHM_perfil += value
-		FWHM_perfil_gauss = np.zeros(len(perfil))
-		FWHM_perfil_gauss += value_gauss
-		result.append(ApogeeFile(filename, perfil, FWHM, FWHM_perfil, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error, answer))
+		if (answer == "y"):
+			FWHM_perfil = np.zeros(len(perfil))
+			FWHM_perfil += value
+			FWHM_perfil_gauss = np.zeros(len(perfil))
+			if (perfil_gauss is not None):
+				FWHM_perfil_gauss = np.zeros(len(perfil_gauss))
+				FWHM_perfil_gauss += value_gauss
+				result.append(ApogeeFile(filename, medium_value, perfil, FWHM, FWHM_perfil, medium_value_gauss, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error))
 	except Exception as e:
 		print e
 
+fig = plt.figure()
 num_graphs = len(result)
-for i in range(num_graphs):
-	fig = plt.figure()
-	graph = result[i]
-	x = np.arange(len(graph.profile))
-	ax = fig.add_subplot(num_graphs, 1,1)
-	if (graph.profile is not None):
-		ax.plot(graph.profile, 'r', label='Data')
-		ax.plot(graph.fwhm_line, 'b', label='FWHM data')
-	if (graph.profile_gauss is not None):
-		ax.plot(graph.profile_gauss, 'g', label='Gaussian')
-		ax.plot(graph.fwhm_gauss_line, 'black', label='FWHM Gauss')
-	ax.set_title(r'%s, FWHM = %s, FWHM_gauss = %s' % (graph.filename, graph.fwhm, graph.fwhm_gauss))
-	handles, labels = ax.get_legend_handles_labels()
-	ax.legend(handles, labels, fontsize=10)
-	for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()): 
-		item.set_fontsize(10)
-	if graph.show :
-		plt.show()
-	filename = graph.filename.split('/')[-1]
-	plt.savefig('./images/%s.png' % filename)
-exit()
+if (num_graphs > 0):
+	for i in range(num_graphs):
+		graph = result[i]
+		x = np.arange(len(graph.profile))
+		ax = fig.add_subplot(num_graphs, 1,i+1)
+		if (graph.profile is not None):
+			ax.plot(graph.profile, 'r', label='Data')
+			ax.plot(graph.fwhm_line, 'b', label='FWHM data')
+		if (graph.profile_gauss is not None):
+			ax.plot(graph.profile_gauss, 'g', label='Gaussian')
+			ax.plot(graph.fwhm_gauss_line, 'black', label='FWHM Gauss')
+		ax.set_title(r'%s, FWHM = %s, FWHM_gauss = %s' % (graph.filename, graph.fwhm, graph.fwhm_gauss))
+		handles, labels = ax.get_legend_handles_labels()
+		ax.legend(handles, labels, fontsize=10)
+		for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()): 
+			item.set_fontsize(10)
+	plt.show()
