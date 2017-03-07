@@ -57,9 +57,14 @@ for mydir in listDirs:
     sorted(filestemp)
     files = files + filestemp
 i = 0
+lineFilename = ""
 for filename in files:
 	i+=1
-	print "[%2d] %s" % (i, filename)
+	strFilename = "[%2d] %s" % (i, filename)
+	lineFilename = lineFilename + strFilename.ljust(50)
+	if i % 2 == 0:
+		print lineFilename
+		lineFilename = ""
 
 files_selected = raw_input("\nPlease, select files (index separated by colon, ex: 1,4,5): ")
 files_index = files_selected.split(',')
@@ -119,9 +124,10 @@ for index in files_index:
 		print "\tDimension: (%d,%d)" % (len(hdulist[0].data[0]), len (hdulist[0].data))
 		print "\tMedium Value : %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value) * 0.87 * u.AA)
 		print "\tFWHM: %s" % FWHM
-		print "\tMedium Value (gaussian(: %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value_gauss) * 0.87 * u.AA)
-		print "\tFWHM (gaussian): %s" % FWHM_gauss
+		print "\tMedium Value (gaussian): %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value_gauss) * 0.87 * u.AA)
+		print "\tFWHM (gaussian): %s" % (FWHM_gauss)
 		print "\tExposure time: %s" % hdulist[0].header["EXPTIME"]
+		print hdulist[0].header.keys
 
 		valid_answers = ["y","n",""]
 		answer = "__"
