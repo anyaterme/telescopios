@@ -22,7 +22,7 @@ mask[146,80] = 1
 mask[053,88] = 1
 
 class ApogeeFile:
-	def __init__(self, filename, profile, fwhm, fwhm_line, profile_gauss, fwhm_gauss, fwhm_gauss_line, error=0.01):
+	def __init__(self, filename, profile, fwhm, fwhm_line, profile_gauss, fwhm_gauss, fwhm_gauss_line, error=0.01, show='n'):
 		self.filename = filename
 		self.profile = profile
 		self.fwhm = fwhm
@@ -31,6 +31,9 @@ class ApogeeFile:
 		self.fwhm_gauss = fwhm_gauss
 		self.fwhm_gauss_line = fwhm_gauss_line
 		self.error = error
+		self.show = False
+		if (show == "y"):
+			self.show = True
 	
 
 
@@ -51,7 +54,12 @@ def get_FWHM(data, delta_px, to_unit):
 	FWHM_units = (FWHM*delta_px).to(to_unit)
 	return (FWHM_units, data[nearest_above])
 
-files = glob.glob("./*.fits")
+listDirs = ["./", "./fits/"]
+totalfiles = []
+for mydir in listDirs:
+	files = glob.glob("%s*.fits" % mydir)
+	files=sorted(files)
+	totalfiles += files
 i = 0
 for filename in files:
 	i+=1
@@ -81,6 +89,8 @@ for index in files_index:
 		if (min(perfil) < 0.):
 			perfil += abs(min(perfil))
 
+		#perfil = (perfil * 1.) / max(perfil)
+
 		FWHM_perfil = np.zeros(len(perfil))
 
 		limit = 0.5
@@ -105,8 +115,8 @@ for index in files_index:
 			fit_g = fitting.LevMarLSQFitter()
 			g = fit_g(g_init, x, perfil)
 			perfil_gauss = g(x)
-
 			FWHM_gauss, value_gauss = get_FWHM(perfil_gauss, 0.87*u.AA, u.nm)
+
 		except:
 			FWHM_gauss, value_gauss = 0,0
 			perfil_gauss = None
@@ -121,32 +131,33 @@ for index in files_index:
 		answer = "__"
 		while answer not in valid_answers:
 			answer = raw_input("Do you want show graphic? y/N: ") 
-		if (answer == "y"):
-			FWHM_perfil = np.zeros(len(perfil))
-			FWHM_perfil += value
-			FWHM_perfil_gauss = np.zeros(len(perfil))
-			FWHM_perfil_gauss += value_gauss
-			result.append(ApogeeFile(filename, perfil, FWHM, FWHM_perfil, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error))
+		FWHM_perfil = np.zeros(len(perfil))
+		FWHM_perfil += value
+		FWHM_perfil_gauss = np.zeros(len(perfil))
+		FWHM_perfil_gauss += value_gauss
+		result.append(ApogeeFile(filename, perfil, FWHM, FWHM_perfil, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error, answer))
 	except Exception as e:
 		print e
 
-fig = plt.figure()
 num_graphs = len(result)
-if (num_graphs > 0):
-	for i in range(num_graphs):
-		graph = result[i]
-		x = np.arange(len(graph.profile))
-		ax = fig.add_subplot(num_graphs, 1,i+1)
-		if (graph.profile is not None):
-			ax.plot(graph.profile, 'r', label='Data')
-			ax.plot(graph.fwhm_line, 'b', label='FWHM data')
-		if (graph.profile_gauss is not None):
-			ax.plot(graph.profile_gauss, 'g', label='Gaussian')
-			ax.plot(graph.fwhm_gauss_line, 'black', label='FWHM Gauss')
-		ax.set_title(r'%s, FWHM = %s, FWHM_gauss = %s' % (graph.filename, graph.fwhm, graph.fwhm_gauss))
-		handles, labels = ax.get_legend_handles_labels()
-		ax.legend(handles, labels, fontsize=10)
-		for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()): 
-			item.set_fontsize(10)
-	plt.show()
+for i in range(num_graphs):
+	fig = plt.figure()
+	graph = result[i]
+	x = np.arange(len(graph.profile))
+	ax = fig.add_subplot(num_graphs, 1,1)
+	if (graph.profile is not None):
+		ax.plot(graph.profile, 'r', label='Data')
+		ax.plot(graph.fwhm_line, 'b', label='FWHM data')
+	if (graph.profile_gauss is not None):
+		ax.plot(graph.profile_gauss, 'g', label='Gaussian')
+		ax.plot(graph.fwhm_gauss_line, 'black', label='FWHM Gauss')
+	ax.set_title(r'%s, FWHM = %s, FWHM_gauss = %s' % (graph.filename, graph.fwhm, graph.fwhm_gauss))
+	handles, labels = ax.get_legend_handles_labels()
+	ax.legend(handles, labels, fontsize=10)
+	for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()): 
+		item.set_fontsize(10)
+	if graph.show :
+		plt.show()
+	filename = graph.filename.split('/')[-1]
+	plt.savefig('./images/%s.png' % filename)
 exit()
