@@ -1,4 +1,6 @@
-#!python
+#!/usr/bin/env python2.7
+#vim:set ts=3:
+#vim:set sw=3:
 import pyfits
 import matplotlib.pyplot as plt
 import numpy as np
