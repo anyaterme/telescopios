@@ -127,7 +127,6 @@ for index in files_index:
 		print "\tMedium Value (gaussian): %s" % (float(initial_wavelength)*u.AA + (len(perfil)-medium_value_gauss) * 0.87 * u.AA)
 		print "\tFWHM (gaussian): %s" % (FWHM_gauss)
 		print "\tExposure time: %s" % hdulist[0].header["EXPTIME"]
-		print hdulist[0].header.keys
 
 		valid_answers = ["y","n",""]
 		answer = "__"
