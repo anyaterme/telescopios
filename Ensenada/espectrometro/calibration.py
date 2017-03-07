@@ -1,13 +1,11 @@
 #!python
+#Author: Daniel Jacobo Diaz Gonzalez
+#Description
 import pyfits
 import matplotlib.pyplot as plt
 import numpy as np
 import astropy.units as u
-from scipy.optimize import curve_fit
 import glob
-import math
-import re
-from scipy.stats import norm
 from astropy.modeling import models, fitting
 
 mask = np.zeros((2048,2048))
