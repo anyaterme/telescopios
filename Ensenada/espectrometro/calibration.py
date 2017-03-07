@@ -41,16 +41,21 @@ def apply_mask(data, mask, row):
 	return data
 
 def get_FWHM(data, delta_px, to_unit):
-	difference = np.max(data) - np.min(data)
-	HM = difference * limit
-	pos_extremum = data.argmax()  
-	nearest_above = (np.abs(data[pos_extremum:-1] - HM)).argmin() + pos_extremum
-	nearest_below = (np.abs(data[0:pos_extremum] - HM)).argmin()
-	FWHM = nearest_above - nearest_below
-	FWHM_units = (FWHM*delta_px).to(to_unit)
-	return (FWHM_units, data[nearest_above], nearest_above - FWHM * 0.5)
+    difference = np.max(data) - np.min(data)
+    HM = difference * limit
+    pos_extremum = data.argmax()  
+    nearest_above = (np.abs(data[pos_extremum:-1] - HM)).argmin() + pos_extremum
+    nearest_below = (np.abs(data[0:pos_extremum] - HM)).argmin()
+    FWHM = nearest_above - nearest_below
+    FWHM_units = (FWHM*delta_px).to(to_unit)
+    return (FWHM_units, data[nearest_above], nearest_above - FWHM * 0.5)
 
-files = glob.glob("./*.fits")
+files = []
+listDirs = ["./", "./fits/"]
+for mydir in listDirs:
+    filestemp = glob.glob("%s*.fits" % mydir)
+    sorted(filestemp)
+    files = files + filestemp
 i = 0
 for filename in files:
 	i+=1
