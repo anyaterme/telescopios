@@ -56,7 +56,7 @@ files = []
 listDirs = ["./", "./fits/"]
 for mydir in listDirs:
     filestemp = glob.glob("%s*.fits" % mydir)
-    sorted(filestemp)
+    filestemp = sorted(filestemp)
     files = files + filestemp
 i = 0
 lineFilename = ""
@@ -163,4 +163,5 @@ if (num_graphs > 0):
 		ax.legend(handles, labels, fontsize=10)
 		for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()): 
 			item.set_fontsize(10)
+		plt.savefig("%s.png" % graph.filename.split('/')[-1])
 	plt.show()
