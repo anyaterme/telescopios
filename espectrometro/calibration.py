@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.7
 #vim:set ts=3:
 #vim:set sw=3:
+import argparse
 import pyfits
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,8 +9,13 @@ import astropy.units as u
 import glob
 import math
 import re
+import sys
 from astropy.modeling import models, fitting
 from datetime import datetime
+
+parser = argparse.ArgumentParser(prog='calibration.py', description='OAN spectrometer calibration.')
+parser.add_argument('--unatt', help='Unattended mode. It choose the default values.', action='store_true')
+args = parser.parse_args()
 
 mask = np.zeros((2048,2048))
 mask[245,71] = 1
@@ -21,6 +27,8 @@ mask[311,17] = 1
 mask[192,49] = 1
 mask[146,80] = 1
 mask[053,88] = 1
+
+print args.unatt
 
 class ApogeeFile:
 	def __init__(self, filename, medium_wavelength, profile, fwhm, fwhm_line, medium_wl_gauss, profile_gauss, fwhm_gauss, fwhm_gauss_line, error=0.01, show="y"):
@@ -73,7 +81,10 @@ for filename in files:
 		print lineFilename
 		lineFilename = ""
 
-files_selected = raw_input("\nPlease, select files (index separated by colon, ex: 1,4,5): ")
+files_selected = raw_input("\nPlease, select files (index separated by colon, example: 1,4,5) (0 for exit): ")
+if (files_selected == "0"):
+	print "See you!!!"
+	sys.exit()
 files_index = files_selected.split(',')
 initial_wavelength= raw_input("\nPlease, introduce the center wavelength (AA): ")
 result = []
@@ -105,6 +116,8 @@ for selection in files_index:
 			valid_answers = ["y","n",""]
 			error = 0.01
 			answer = "__"
+			if (args.unatt):
+				answer = ""
 			while answer not in valid_answers:
 				answer = raw_input("Please, you must specify the noise level (0-1.) (default value = 0.01): ") 
 				try:
@@ -140,11 +153,14 @@ for selection in files_index:
 			print "\tWindow Values (Gaussian): %s - %s" % (initial_window_gauss, initial_window_gauss + (len(perfil) * 0.87 * u.AA))
 			print "\tFWHM (gaussian): %s" % (FWHM_gauss)
 			print "\tExposure time: %s" % hdulist[0].header["EXPTIME"]
-			strLine = "%s;(%d-%d);%E;%E;%E;%E;%d" % (filename.split('/')[-1],len(hdulist[0].data[0]), len (hdulist[0].data), float(initial_wavelength)*u.AA.cgs.value, initial_window.cgs.value, final_window.cgs.value, FWHM.cgs.value, hdulist[0].header["EXPTIME"])
+			central_wavelength = float(initial_wavelength)*u.AA
+			strLine = "%s;(%d-%d);%E;%E;%E;%E;%d" % (filename.split('/')[-1],len(hdulist[0].data[0]), len (hdulist[0].data), central_wavelength.cgs.value, initial_window.cgs.value, final_window.cgs.value, FWHM.cgs.value, hdulist[0].header["EXPTIME"])
 			resultLines.append(strLine)
 
 			valid_answers = ["y","n",""]
 			answer = "__"
+			if (args.unatt):
+				answer = "n"
 			while answer not in valid_answers:
 				answer = raw_input("Do you want show graphic? y/N: ") 
 			FWHM_perfil = np.zeros(len(perfil))
@@ -158,11 +174,13 @@ for selection in files_index:
 			print e
 
 
+print "\n\n\nGenerating images..." 
 num_graphs = len(result)
 if (num_graphs > 0):
 	for i in range(num_graphs):
 		fig = plt.figure()
 		graph = result[i]
+		print "\t./images/%s.png" % graph.filename.split('/')[-1]
 		initial_window= (float(initial_wavelength)*u.AA - (len(perfil)-graph.medium_wl) * 0.87 * u.AA)
 		final_window = initial_window + len(perfil) * 0.87 * u.AA
 		x = np.linspace(initial_window.value, final_window.value, len(perfil))
@@ -189,6 +207,7 @@ if (num_graphs > 0):
 		plt.close(fig)
 
 filename = "%s_calibration.csv" % datetime.now().strftime('%Y%m%d%H%M%S')
+print "\n\n\nWriting results in %s..." % filename
 f = open(filename, "w")
 f.write("filename;dimension;central_wavelength;initial_wavelength;final_wavelength;fwhm;exptime(s)\n")
 for line in resultLines:
