@@ -56,14 +56,15 @@ def apply_mask(data, mask, row):
 	return data
 
 def get_FWHM(data, delta_px, to_unit):
-    difference = np.max(data) - np.min(data)
-    HM = difference * limit
-    pos_extremum = data.argmax()  
-    nearest_above = (np.abs(data[pos_extremum:-1] - HM)).argmin() + pos_extremum
-    nearest_below = (np.abs(data[0:pos_extremum] - HM)).argmin()
-    FWHM = nearest_above - nearest_below
-    FWHM_units = (FWHM*delta_px).to(to_unit)
-    return (FWHM_units, data[nearest_above], nearest_above - FWHM * 0.5)
+	difference = np.max(data) - np.min(data)
+	HM = difference * limit
+	pos_extremum = data.argmax()  
+	print "MIN: ", np.min(np.abs(data[pos_extremum:-1]-HM))
+	nearest_above = (np.abs(data[pos_extremum:-1] - HM)).argmin() + pos_extremum
+	nearest_below = (np.abs(data[0:pos_extremum] - HM)).argmin()
+	FWHM = nearest_above - nearest_below
+	FWHM_units = (FWHM*delta_px).to(to_unit)
+	return (FWHM_units, data[nearest_above], nearest_above - FWHM * 0.5)
 
 files = []
 listDirs = ["./", "./fits/"]
@@ -107,8 +108,9 @@ for selection in files_index:
 
 			x = np.arange(len(perfil))
 			perfil = np.asarray(perfil)
-			if (min(perfil) < 0.):
-				perfil += abs(min(perfil))
+			for i in range(len(perfil)):
+				if (perfil[i] < 0.):
+					perfil[i] = 0.
 
 			FWHM_perfil = np.zeros(len(perfil))
 
