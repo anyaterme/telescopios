@@ -90,10 +90,14 @@ files_index = files_selected.split(',')
 initial_wavelength= raw_input("\nPlease, introduce the center wavelength (AA): ")
 result = []
 resultLines = []
+formats = np.dtype([('label', '|S8'), ('initial', 'f8'), ('final', 'f8')])
+list_windows = np.loadtxt('./docs/POSITIONS.txt', skiprows=1, dtype=formats)
 for selection in files_index:
 	for index in range(int(selection.split('-')[0]), int(selection.split('-')[-1])+1):
 		try:
 			filename = files[int(index)-1]
+			position = re.search("\d\dp\d\d", filename).group()
+			theorical_window = [x for x in list_windows if x[0] == position][0]
 			print "\n\n================ [%s] ====================" % filename
 			hdulist = pyfits.open(filename)
 			perfil = []
@@ -146,9 +150,11 @@ for selection in files_index:
 				print "\tNo es posible ajustar (%s)" % str(e)
 
 			print "\tDimension: (%d,%d)" % (len(hdulist[0].data[0]), len (hdulist[0].data))
+			print "\tPosition: %s" % position
 			print "\tCentral Wavelength: %s" % (float(initial_wavelength)*u.AA)
 			initial_window = (float(initial_wavelength)*u.AA - (len(perfil)-medium_value) * 0.87 * u.AA)
 			final_window = initial_window + len(perfil) * 0.87 * u.AA
+			print "\tTheorical Window Values : %s - %s" % (theorical_window[1] * u.AA, theorical_window[2] * u.AA)
 			print "\tWindow Values : %s - %s" % (initial_window, final_window)
 			print "\tFWHM: %s" % FWHM
 			initial_window_gauss= (float(initial_wavelength)*u.AA - (len(perfil)-medium_value_gauss) * 0.87 * u.AA)
