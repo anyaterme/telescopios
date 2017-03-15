@@ -96,8 +96,13 @@ for selection in files_index:
 	for index in range(int(selection.split('-')[0]), int(selection.split('-')[-1])+1):
 		try:
 			filename = files[int(index)-1]
-			position = re.search("\d\dp\d\d", filename).group()
-			theorical_window = [x for x in list_windows if x[0] == position][0]
+                        position = "undefinied"
+                        theorical_window = [0, 0, 0] 
+                        try:
+			    position = re.search("\d\dp\d\d", filename).group()
+			    theorical_window = [x for x in list_windows if x[0] == position][0]
+                        except:
+                            pass
 			print "\n\n================ [%s] ====================" % filename
 			hdulist = pyfits.open(filename)
 			perfil = []
@@ -177,14 +182,14 @@ for selection in files_index:
 			if (perfil_gauss is not None):
 				FWHM_perfil_gauss = np.zeros(len(perfil_gauss))
 				FWHM_perfil_gauss += value_gauss
-				result.append(ApogeeFile(filename, medium_value, perfil, FWHM, FWHM_perfil, medium_value_gauss, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error, answer))
+			result.append(ApogeeFile(filename, medium_value, perfil, FWHM, FWHM_perfil, medium_value_gauss, perfil_gauss, FWHM_gauss, FWHM_perfil_gauss, error, answer))
 		except Exception as e:
 			print e
 
 
-print "\n\n\nGenerating images..." 
 num_graphs = len(result)
 if (num_graphs > 0):
+        print "Generating images..."
 	for i in range(num_graphs):
 		fig = plt.figure()
 		graph = result[i]
